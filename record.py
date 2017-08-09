@@ -85,12 +85,12 @@ def get_Box_ID():
 ## just in case Im stuck with HTTP
 import urllib2
 def http_transmit(data):
-    urllib2.urlopen("http://seat-skomobo.massey.ac.nz/" + data)
+    urllib2.urlopen("http://seat-skomobo.massey.ac.nz/raspi_" + data)
 
 
 def style(time_sent, DB, Distances):
     data = [time_sent, DB] + Distances
-    return '_'.join(data)
+    return ','.join(data)
 
 # Run the code
 
@@ -113,6 +113,6 @@ while(True):
     packet = encode(hex_ID, get_time(), hex_db, hex_distances, '_')
 
     store(ID, style(get_time(), db, distances, ','))
-    transmit(packet)
+    http_transmit(packet)
 
     print packet
