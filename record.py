@@ -85,7 +85,7 @@ def get_Box_ID():
 ## just in case Im stuck with HTTP
 import urllib2
 def http_transmit(data):
-    urllib2.urlopen("http://seat-skomobo.massey.ac.nz/raspi_" + data)
+    urllib2.urlopen("http://seat-skomobo.massey.ac.nz/raspi/" + data)
 
 
 def style(time_sent, DB, Distances):
