@@ -35,11 +35,39 @@ def http_transmit(data):
 
 # checks if the bluetooth connection still exists
 def check_connection():
+    global sock
+    print "Going to check connection"
     try:
+        print "Checking connection"
         sock.getpeername()
         return True
     except:
         return False
+
+def connect():
+    global sock
+    sock.close()
+    sock = bluetooth.BluetoothSocket (bluetooth.RFCOMM)
+
+    print "trying to reconnect"
+
+    print "Connecting to " + bd_addr
+    try:        
+        sock.connect((bd_addr,port))
+
+    except:
+        print "Host not found make sure the arduinos bluetooth is working"
+
+            
+
+    while(check_connection() == False):
+        print "Trying to connect to " + bd_addr + " again"
+        try:        
+            sock.connect((bd_addr,port))
+
+        except:
+            print "Host not found make sure the arduinos bluetooth is working"
+            sock.close()
     
 def http_format(data):
 
@@ -68,63 +96,44 @@ def http_format(data):
 
 bd_addr = "98:D3:31:F6:06:9F" #The address from the HC-05 sensor
 port = 1
-sock = bluetooth.BluetoothSocket (bluetooth.RFCOMM)
+sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
 
-import sys
-import time
-# infinitely tries to connect and if it doesnt it just retries
-def connect():
+print "Connecting to arduino with address " + bd_addr
+try:
+    sock.connect((bd_addr,port))
+except:
+    connect()
 
-    global sock
-    
-    while(1):
-        try:
-            print "Connecting to " + bd_addr
-            sock.connect((bd_addr,port))
-            break
-        except:
-            print "Connection failed "
-            print "Reconnecting to " + bd_addr
 
-            try:
-                sock.close()
-                sock = bluetooth.BluetoothSocket (bluetooth.RFCOMM)
-                sock.connect((bd_addr,port))
-                break
-            except KeyboardInterrupt:
-                sock.close()
-                sys.exit(1)    
-            except:
-                print "OS error? sleeping for 3 seconds"
-                time.sleep(3)
-                continue
-    return
-
-connect()
 
 # create column headings
 print "Initalizing SD card"
 store("Time,Moving,Temp,Humid,CO2,Dust 1.0,Dust 2.5,Dust 10\n")
 
-
+print "Collecting data from bluetooth"
 data = ""
 while 1:
-    print "Collecting data from bluetooth"
     try:
 
-        data += sock.recv(1024)
-        data_end = data.find('\n')
+        if(check_connnection()):
+            
+            data += sock.recv(1024)
+            data_end = data.find('\n')
+            if data_end != -1:
+                rec = data[:data_end]
+                print "Storing data in sd card " + data
+                store(data)
 
-        if data_end != -1:
-            rec = data[:data_end]
-            print "Storing data in sd card " + data
-            store(data)
+                data = data[data_end+1:]
 
-            data = data[data_end+1:]
+                print "Transmitting data to server"            
+                http_transmit(http_format(rec))
+        else:
+          print "Connection lost"
+          print "Reconnecting to " + bd_addr
+          connect()
+          
 
-            print "Transmitting data to server"            
-            http_transmit(http_format(rec))
-       
 
     except KeyboardInterrupt:
         break
@@ -132,13 +141,5 @@ while 1:
     # assuming all other errors are caused by bluetooth so try to reconnect
     except:
         print "Some other error occured"
-
-        try:
-            connect()
-            continue
-
-        # continue doing things anyways
-        except:
-            continue
-    
+        connect()
 sock.close()
